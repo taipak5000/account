@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>キャンドル・アカウント管理</title>
+  <style>
+    /* 画面のデザイン（CSS） */
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      background-color: #f4f7f6;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    h2 {
+      font-size: 1.2rem;
+      color: #34495e;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 5px;
+    }
+    .card {
+      background: #ffffff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .form-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    input[type="text"], input[type="number"], select {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .btn-danger {
+      background-color: #e74c3c;
+    }
+    .btn-danger:hover {
+      background-color: #c0392b;
+    }
+    .btn-action {
+      background-color: #2ecc71;
+    }
+    .btn-action:hover {
+      background-color: #27ae60;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #f8f9fa;
+      font-weight: bold;
+    }
+    td input[type="number"] {
+      width: 80px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>アカウント管理システム</h1>
+
+  <div class="card">
+    <h2>新規アカウント登録</h2>
+    <div class="form-group">
+      <input type="text" id="input-name" placeholder="アカウント名 (必須)" required>
+      <input type="text" id="input-device" placeholder="使用機種 (例: iPhone15)">
+      <input type="text" id="input-group" placeholder="グループ名 (例: メイン, サブ)">
+      <input type="number" id="input-candles" placeholder="初期キャンドル数" value="0">
+      <button onclick="addAccount()">登録する</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>キャンドル数 一括変更</h2>
+    <div class="form-group">
+      <label for="batch-target">対象:</label>
+      <select id="batch-target">
+        <option value="ALL">全体（すべてのアカウント）</option>
+        </select>
+      
+      <span style="margin-left: 15px;">変動値:</span>
+      <button class="btn-action" onclick="applyBatchChange(3)">+3</button>
+      <button class="btn-action" onclick="applyBatchChange(-6)">-6</button>
+      
+      <span style="margin-left: 15px;">または任意入力:</span>
+      <input type="number" id="batch-custom-value" placeholder="例: 10, -5" style="width: 100px;">
+      <button onclick="applyCustomBatchChange()">適用</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>登録アカウント一覧</h2>
+    <table id="account-table">
+      <thead>
+        <tr>
+          <th>アカウント名</th>
+          <th>使用機種</th>
+          <th>グループ</th>
+          <th>キャンドル数</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        </tbody>
+    </table>
+  </div>
+
+  <script>
+    // アカウントのデータを保存する配列
+    let accounts = [];
+    let nextId = 1;
+
+    // 1. アカウントを追加する機能
+    function addAccount() {
+      const name = document.getElementById('input-name').value.trim();
+      const device = document.getElementById('input-device').value.trim() || '未指定';
+      const group = document.getElementById('input-group').value.trim() || '未分類';
+      const candles = parseInt(document.getElementById('input-candles').value) || 0;
+
+      if (!name) {
+        alert('アカウント名は必ず入力してください。');
+        return;
+      }
+
+      // データを配列に追加
+      accounts.push({
+        id: nextId++,
+        name: name,
+        device: device,
+        group: group,
+        candles: candles
+      });
+
+      // 入力欄をリセット
+      document.getElementById('input-name').value = '';
+      document.getElementById('input-device').value = '';
+      document.getElementById('input-group').value = '';
+      document.getElementById('input-candles').value = '0';
+
+      // 画面を更新
+      render();
+    }
+
+    // 2. 個別のキャンドル数を直接変更したときの処理
+    function updateSingleCandle(id, value) {
+      const account = accounts.find(acc => acc.id === id);
+      if (account) {
+        account.candles = parseInt(value) || 0;
+      }
+    }
+
+    // 3. アカウントを削除する機能
+    function deleteAccount(id) {
+      if (confirm('本当にこのアカウントを削除しますか？')) {
+        accounts = accounts.filter(acc => acc.id !== id);
+        render();
+      }
+    }
+
+    // 4. 一括変更の機能（+3, -6 などのボタン用）
+    function applyBatchChange(amount) {
+      const targetGroup = document.getElementById('batch-target').value;
+      
+      accounts.forEach(acc => {
+        if (targetGroup === 'ALL' || acc.group === targetGroup) {
+          acc.candles += amount;
+        }
+      });
+      
+      render();
+    }
+
+    // 5. 任意の入力値で一括変更する機能
+    function applyCustomBatchChange() {
+      const customValue = parseInt(document.getElementById('batch-custom-value').value);
+      if (isNaN(customValue)) {
+        alert('数値を入力してください。');
+        return;
+      }
+      applyBatchChange(customValue);
+      document.getElementById('batch-custom-value').value = ''; // 入力欄リセット
+    }
+
+    // 6. 画面（表とグループ選択肢）を書き換える機能
+    function render() {
+      const tbody = document.querySelector('#account-table tbody');
+      tbody.innerHTML = ''; // 表を一度空にする
+
+      const groups = new Set(); // 重複なしでグループ名を保存するためのセット
+
+      // アカウントごとに表の行(tr)を作成
+      accounts.forEach(acc => {
+        groups.add(acc.group); // グループ名を記録
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${acc.name}</td>
+          <td>${acc.device}</td>
+          <td>${acc.group}</td>
+          <td>
+            <input type="number" value="${acc.candles}" onchange="updateSingleCandle(${acc.id}, this.value)">
+          </td>
+          <td>
+            <button class="btn-danger" onclick="deleteAccount(${acc.id})">削除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // グループ選択プルダウンの更新
+      const select = document.getElementById('batch-target');
+      const currentTarget = select.value; // 現在選ばれているものを記憶
+
+      select.innerHTML = '<option value="ALL">全体（すべてのアカウント）</option>';
+      
+      groups.forEach(groupName => {
+        const option = document.createElement('option');
+        option.value = groupName;
+        option.textContent = `グループ: ${groupName}`;
+        select.appendChild(option);
+      });
+
+      // 以前選ばれていたグループがまだ存在すれば、選択状態を復元する
+      if (Array.from(select.options).some(opt => opt.value === currentTarget)) {
+        select.value = currentTarget;
+      }
+    }
+  </script>
+</body>
+</html>
