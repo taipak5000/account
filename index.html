@@ -27,7 +27,7 @@
     }
 
     .container {
-      max-width: 600px;
+      max-width: 650px;
       margin: 0 auto;
     }
 
@@ -143,7 +143,7 @@
       flex: 1;
     }
 
-    /* リスト・テーブル形式 */
+    /* リスト形式 */
     .account-list {
       display: flex;
       flex-direction: column;
@@ -155,6 +155,7 @@
       justify-content: space-between;
       padding: 12px 4px;
       border-bottom: 1px solid #ededf0;
+      gap: 10px;
     }
 
     .account-item:last-child {
@@ -163,34 +164,68 @@
 
     .account-info {
       flex: 1;
+      min-width: 0; /* 文字溢れ対策 */
     }
 
     .account-name {
       font-size: 17px;
       font-weight: 600;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .account-meta {
-      font-size: 13px;
-      color: var(--ios-secondary-text);
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
-    .account-meta span {
-      margin-right: 8px;
+    .badge-device {
+      font-size: 12px;
+      color: var(--ios-secondary-text);
       background: #f2f2f7;
-      padding: 2px 6px;
-      border-radius: 4px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* グループ用の動的バッジ */
+    .badge-group {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
     }
 
     .account-controls {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
+    }
+
+    /* 並び替えボタンのスタイル */
+    .sort-btns {
+      display: flex;
+      gap: 2px;
+    }
+
+    .btn-sort {
+      background-color: #e5e5ea;
+      color: var(--ios-blue);
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+    }
+
+    .btn-sort:disabled {
+      color: #aeaeb2;
+      background-color: #f2f2f7;
+      cursor: not-allowed;
     }
 
     .account-controls input[type="number"] {
-      width: 80px;
+      width: 75px;
       text-align: right;
       padding: 8px;
       background-color: var(--ios-input-bg);
@@ -256,14 +291,23 @@
   </div>
 
   <script>
-    // キーネーム（ローカルストレージ用）
-    const STORAGE_KEY = 'ios_account_manager_data';
+    const STORAGE_KEY = 'ios_account_manager_data_v2';
 
-    // データの読み込み、または初期化
     let accounts = [];
     let nextId = 1;
 
-    // 起動時にローカルストレージからデータを読み込む関数
+    // iOS風のパステルカラーパレット（グループ色分け用）
+    const groupColors = [
+      { bg: '#e1f5fe', text: '#0288d1' }, // ライトブルー
+      { bg: '#e8f5e9', text: '#388e3c' }, // ライトグリーン
+      { bg: '#fff3e0', text: '#f57c00' }, // ライトオレンジ
+      { bg: '#f3e5f5', text: '#7b1fa2' }, // ライトパープル
+      { bg: '#fce4ec', text: '#c2185b' }, // ライトピンク
+      { bg: '#e0f2f1', text: '#004d40' }, // ミントグリーン
+      { bg: '#fffde7', text: '#f57f17' }  // ライトイエロー
+    ];
+
+    // 起動時にローカルストレージからデータを読み込む
     function loadData() {
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
@@ -272,19 +316,14 @@
           accounts = parsed.accounts || [];
           nextId = parsed.nextId || 1;
         } catch (e) {
-          console.error("データの読み込みに失敗しました。データを初期化します。", e);
-          accounts = [];
-          nextId = 1;
+          console.error("データの読み込みに失敗しました。", e);
         }
       }
     }
 
-    // ローカルストレージにデータを保存する関数
+    // ローカルストレージにデータを保存
     function saveData() {
-      const dataToSave = {
-        accounts: accounts,
-        nextId: nextId
-      };
+      const dataToSave = { accounts: accounts, nextId: nextId };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     }
 
@@ -308,14 +347,13 @@
         candles: candles
       });
 
-      // 入力欄リセット
       document.getElementById('input-name').value = '';
       document.getElementById('input-device').value = '';
       document.getElementById('input-group').value = '';
       document.getElementById('input-candles').value = '0';
 
-      saveData(); // 保存
-      render();   // 描画更新
+      saveData();
+      render();
     }
 
     // 個別のキャンドル数変更
@@ -323,7 +361,7 @@
       const account = accounts.find(acc => acc.id === id);
       if (account) {
         account.candles = parseInt(value) || 0;
-        saveData(); // 変更時にすぐ保存
+        saveData();
       }
     }
 
@@ -331,9 +369,30 @@
     function deleteAccount(id) {
       if (confirm('このアカウントを削除してもよろしいですか？')) {
         accounts = accounts.filter(acc => acc.id !== id);
-        saveData(); // 保存
-        render();   // 描画更新
+        saveData();
+        render();
       }
+    }
+
+    // アカウントの並び替え（位置の入れ替え）
+    function moveAccount(id, direction) {
+      const index = accounts.findIndex(acc => acc.id === id);
+      if (index === -1) return;
+
+      if (direction === 'up' && index > 0) {
+        // 一つ上の要素と交換
+        const temp = accounts[index];
+        accounts[index] = accounts[index - 1];
+        accounts[index - 1] = temp;
+      } else if (direction === 'down' && index < accounts.length - 1) {
+        // 一つ下の要素と交換
+        const temp = accounts[index];
+        accounts[index] = accounts[index + 1];
+        accounts[index + 1] = temp;
+      }
+
+      saveData();
+      render();
     }
 
     // 一括変更
@@ -346,8 +405,8 @@
         }
       });
       
-      saveData(); // 保存
-      render();   // 描画更新
+      saveData();
+      render();
     }
 
     // 任意入力での一括変更
@@ -372,11 +431,26 @@
         return;
       }
 
+      // グループ名と色のマップを作成
       const groups = new Set();
+      const groupColorMap = new Map();
+      let colorIdx = 0;
 
-      // アカウントリストの生成
+      // まず全グループをリストアップし、それぞれに異なるパステルカラーを割り当てる
       accounts.forEach(acc => {
         groups.add(acc.group);
+        if (!groupColorMap.has(acc.group)) {
+          // カラーパレットから色を選び、足りなくなったらループさせる
+          groupColorMap.set(acc.group, groupColors[colorIdx % groupColors.length]);
+          colorIdx++;
+        }
+      });
+
+      // アカウントリストの生成
+      accounts.forEach((acc, index) => {
+        const isFirst = (index === 0);
+        const isLast = (index === accounts.length - 1);
+        const colors = groupColorMap.get(acc.group);
 
         const item = document.createElement('div');
         item.className = 'account-item';
@@ -384,11 +458,17 @@
           <div class="account-info">
             <div class="account-name">${acc.name}</div>
             <div class="account-meta">
-              <span>${acc.device}</span>
-              <span>${acc.group}</span>
+              <span class="badge-device">${acc.device}</span>
+              <span class="badge-group" style="background-color: ${colors.bg}; color: ${colors.text};">
+                ${acc.group}
+              </span>
             </div>
           </div>
           <div class="account-controls">
+            <div class="sort-btns">
+              <button class="btn-sort" onclick="moveAccount(${acc.id}, 'up')" ${isFirst ? 'disabled' : ''}>↑</button>
+              <button class="btn-sort" onclick="moveAccount(${acc.id}, 'down')" ${isLast ? 'disabled' : ''}>↓</button>
+            </div>
             <input type="number" value="${acc.candles}" onchange="updateSingleCandle(${acc.id}, this.value)">
             <button class="btn-red btn-icon" onclick="deleteAccount(${acc.id})">削除</button>
           </div>
@@ -413,10 +493,9 @@
       }
     }
 
-    // ページ読み込み時の初期動作
     window.onload = function() {
-      loadData(); // ローカルストレージから読み込み
-      render();   // 画面に表示
+      loadData();
+      render();
     };
   </script>
 </body>
