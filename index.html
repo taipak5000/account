@@ -10,10 +10,11 @@
       --ios-blue: #007aff;
       --ios-green: #34c759;
       --ios-red: #ff3b30;
+      --ios-orange: #ff9500;
       --ios-bg: #f2f2f7;
       --ios-card: #ffffff;
       --ios-text: #000000;
-      --ios-secondary-text: #8e8e93;
+      --ios-secondary-text: #636366;
       --ios-input-bg: #e5e5ea;
     }
 
@@ -114,6 +115,7 @@
 
     .btn-green { background-color: var(--ios-green); }
     .btn-red { background-color: var(--ios-red); }
+    .btn-orange { background-color: var(--ios-orange); }
     
     /* 一括操作エリア */
     .batch-actions {
@@ -147,24 +149,23 @@
     .account-list {
       display: flex;
       flex-direction: column;
+      gap: 8px; /* カード同士の隙間 */
     }
 
+    /* 行全体をカード風にしてグループ色を敷く */
     .account-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 4px;
-      border-bottom: 1px solid #ededf0;
+      padding: 14px 12px;
+      border-radius: 10px;
       gap: 10px;
-    }
-
-    .account-item:last-child {
-      border-bottom: none;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.03); /* 軽い輪郭線 */
     }
 
     .account-info {
       flex: 1;
-      min-width: 0; /* 文字溢れ対策 */
+      min-width: 0;
     }
 
     .account-name {
@@ -178,63 +179,56 @@
 
     .account-meta {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       flex-wrap: wrap;
+      font-size: 13px;
     }
 
-    .badge-device {
-      font-size: 12px;
-      color: var(--ios-secondary-text);
-      background: #f2f2f7;
-      padding: 2px 8px;
-      border-radius: 10px;
-    }
-
-    /* グループ用の動的バッジ */
-    .badge-group {
-      font-size: 12px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 10px;
+    .meta-label {
+      opacity: 0.8;
+      font-weight: 500;
     }
 
     .account-controls {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
-    /* 並び替えボタンのスタイル */
+    /* 並び替えボタン */
     .sort-btns {
       display: flex;
+      flex-direction: column;
       gap: 2px;
     }
 
     .btn-sort {
-      background-color: #e5e5ea;
+      background-color: rgba(255, 255, 255, 0.6);
       color: var(--ios-blue);
-      padding: 6px 10px;
-      font-size: 14px;
-      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      line-height: 1;
     }
 
     .btn-sort:disabled {
       color: #aeaeb2;
-      background-color: #f2f2f7;
+      background-color: rgba(0, 0, 0, 0.05);
       cursor: not-allowed;
     }
 
     .account-controls input[type="number"] {
-      width: 75px;
+      width: 70px;
       text-align: right;
-      padding: 8px;
-      background-color: var(--ios-input-bg);
+      padding: 8px 6px;
+      background-color: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(0,0,0,0.1);
     }
 
     .btn-icon {
-      padding: 8px 12px;
-      font-size: 14px;
-      font-weight: normal;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 500;
       border-radius: 6px;
     }
 
@@ -244,6 +238,12 @@
       padding: 20px 0;
       font-size: 15px;
     }
+
+    /* 編集モード中のフォーム強調 */
+    .editing-highlight {
+      border: 2px solid var(--ios-orange) !important;
+      background-color: #fff9f0 !important;
+    }
   </style>
 </head>
 <body>
@@ -251,8 +251,8 @@
   <div class="container">
     <h1>アカウント管理</h1>
 
-    <h2>新規アカウント登録</h2>
-    <div class="card">
+    <h2 id="form-title">新規アカウント登録</h2>
+    <div class="card" id="form-card">
       <div class="form-group">
         <input type="text" id="input-name" placeholder="アカウント名 (必須)">
         <div class="input-row">
@@ -260,7 +260,8 @@
           <input type="text" id="input-group" placeholder="グループ (例: メイン)">
         </div>
         <input type="number" id="input-candles" placeholder="初期キャンドル数" value="0">
-        <button class="btn-block" onclick="addAccount()">アカウントを追加</button>
+        <button class="btn-block" id="btn-submit" onclick="handleSubmit()">アカウントを追加</button>
+        <button class="btn-block btn-red" id="btn-cancel-edit" onclick="cancelEdit()" style="display: none; margin-top: -6px; background-color: #8e8e93;">編集をキャンセル</button>
       </div>
     </div>
 
@@ -284,30 +285,29 @@
     </div>
 
     <h2>登録アカウント一覧</h2>
-    <div class="card">
-      <div id="account-list" class="account-list">
-        </div>
-    </div>
+    <div id="account-list" class="account-list">
+      </div>
   </div>
 
   <script>
-    const STORAGE_KEY = 'ios_account_manager_data_v2';
+    const STORAGE_KEY = 'ios_account_manager_data_v3';
 
     let accounts = [];
     let nextId = 1;
+    let editingId = null; // 現在編集中のアカウントID（nullなら新規登録モード）
 
-    // iOS風のパステルカラーパレット（グループ色分け用）
+    // グループごとの背景色・文字色リスト（文字が見やすくなるよう調整）
     const groupColors = [
       { bg: '#e1f5fe', text: '#0288d1' }, // ライトブルー
-      { bg: '#e8f5e9', text: '#388e3c' }, // ライトグリーン
-      { bg: '#fff3e0', text: '#f57c00' }, // ライトオレンジ
-      { bg: '#f3e5f5', text: '#7b1fa2' }, // ライトパープル
+      { bg: '#e8f5e9', text: '#2e7d32' }, // ライトグリーン
+      { bg: '#fff3e0', text: '#e65100' }, // ライトオレンジ
+      { bg: '#f3e5f5', text: '#6a1b9a' }, // ライトパープル
       { bg: '#fce4ec', text: '#c2185b' }, // ライトピンク
-      { bg: '#e0f2f1', text: '#004d40' }, // ミントグリーン
+      { bg: '#e0f2f1', text: '#00695c' }, // ミントグリーン
       { bg: '#fffde7', text: '#f57f17' }  // ライトイエロー
     ];
 
-    // 起動時にローカルストレージからデータを読み込む
+    // ローカルストレージから読み込み
     function loadData() {
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
@@ -321,14 +321,14 @@
       }
     }
 
-    // ローカルストレージにデータを保存
+    // ローカルストレージに保存
     function saveData() {
       const dataToSave = { accounts: accounts, nextId: nextId };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     }
 
-    // アカウントを追加
-    function addAccount() {
+    // 登録 or 編集確定ボタンが押された時の処理
+    function handleSubmit() {
       const name = document.getElementById('input-name').value.trim();
       const device = document.getElementById('input-device').value.trim() || '未指定';
       const group = document.getElementById('input-group').value.trim() || '未分類';
@@ -339,21 +339,76 @@
         return;
       }
 
-      accounts.push({
-        id: nextId++,
-        name: name,
-        device: device,
-        group: group,
-        candles: candles
-      });
+      if (editingId !== null) {
+        // 【編集モード】既存のデータを更新
+        const account = accounts.find(acc => acc.id === editingId);
+        if (account) {
+          account.name = name;
+          account.device = device;
+          account.group = group;
+          account.candles = candles;
+        }
+        // 編集モードを抜ける
+        cancelEdit();
+      } else {
+        // 【新規登録モード】
+        accounts.push({
+          id: nextId++,
+          name: name,
+          device: device,
+          group: group,
+          candles: candles
+        });
+        resetForm();
+      }
 
+      saveData();
+      render();
+    }
+
+    // 編集モードに入る
+    function startEdit(id) {
+      const account = accounts.find(acc => acc.id === id);
+      if (!account) return;
+
+      editingId = id;
+
+      // フォームに値をセット
+      document.getElementById('input-name').value = account.name;
+      document.getElementById('input-device').value = account.device;
+      document.getElementById('input-group').value = account.group;
+      document.getElementById('input-candles').value = account.candles;
+
+      // UIを編集モード用に切り替え
+      document.getElementById('form-title').textContent = 'アカウント情報の編集';
+      const submitBtn = document.getElementById('btn-submit');
+      submitBtn.textContent = '変更を保存';
+      submitBtn.className = 'btn-block btn-orange';
+      document.getElementById('btn-cancel-edit').style.display = 'block';
+      document.getElementById('form-card').classList.add('editing-highlight');
+
+      // 画面の一番上（フォーム）へスクロール
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 編集をキャンセル
+    function cancelEdit() {
+      editingId = null;
+      resetForm();
+      
+      document.getElementById('form-title').textContent = '新規アカウント登録';
+      const submitBtn = document.getElementById('btn-submit');
+      submitBtn.textContent = 'アカウントを追加';
+      submitBtn.className = 'btn-block';
+      document.getElementById('btn-cancel-edit').style.display = 'none';
+      document.getElementById('form-card').classList.remove('editing-highlight');
+    }
+
+    function resetForm() {
       document.getElementById('input-name').value = '';
       document.getElementById('input-device').value = '';
       document.getElementById('input-group').value = '';
       document.getElementById('input-candles').value = '0';
-
-      saveData();
-      render();
     }
 
     // 個別のキャンドル数変更
@@ -368,24 +423,23 @@
     // アカウント削除
     function deleteAccount(id) {
       if (confirm('このアカウントを削除してもよろしいですか？')) {
+        if (editingId === id) cancelEdit(); // 編集中のものを消したら編集キャンセル
         accounts = accounts.filter(acc => acc.id !== id);
         saveData();
         render();
       }
     }
 
-    // アカウントの並び替え（位置の入れ替え）
+    // 並び替え
     function moveAccount(id, direction) {
       const index = accounts.findIndex(acc => acc.id === id);
       if (index === -1) return;
 
       if (direction === 'up' && index > 0) {
-        // 一つ上の要素と交換
         const temp = accounts[index];
         accounts[index] = accounts[index - 1];
         accounts[index - 1] = temp;
       } else if (direction === 'down' && index < accounts.length - 1) {
-        // 一つ下の要素と交換
         const temp = accounts[index];
         accounts[index] = accounts[index + 1];
         accounts[index + 1] = temp;
@@ -409,7 +463,6 @@
       render();
     }
 
-    // 任意入力での一括変更
     function applyCustomBatchChange() {
       const customValue = parseInt(document.getElementById('batch-custom-value').value);
       if (isNaN(customValue)) {
@@ -426,27 +479,25 @@
       listContainer.innerHTML = '';
 
       if (accounts.length === 0) {
-        listContainer.innerHTML = '<div class="empty-state">アカウントが登録されていません</div>';
+        listContainer.innerHTML = '<div class="card"><div class="empty-state">アカウントが登録されていません</div></div>';
         document.getElementById('batch-target').innerHTML = '<option value="ALL">全体（すべて）</option>';
         return;
       }
 
-      // グループ名と色のマップを作成
+      // グループの色マップを作成
       const groups = new Set();
       const groupColorMap = new Map();
       let colorIdx = 0;
 
-      // まず全グループをリストアップし、それぞれに異なるパステルカラーを割り当てる
       accounts.forEach(acc => {
         groups.add(acc.group);
         if (!groupColorMap.has(acc.group)) {
-          // カラーパレットから色を選び、足りなくなったらループさせる
           groupColorMap.set(acc.group, groupColors[colorIdx % groupColors.length]);
           colorIdx++;
         }
       });
 
-      // アカウントリストの生成
+      // アカウントカードの生成
       accounts.forEach((acc, index) => {
         const isFirst = (index === 0);
         const isLast = (index === accounts.length - 1);
@@ -454,29 +505,32 @@
 
         const item = document.createElement('div');
         item.className = 'account-item';
+        // 背景色と文字色を行全体（アカウントカード全体）に敷く
+        item.style.backgroundColor = colors.bg;
+        item.style.color = colors.text;
+
         item.innerHTML = `
           <div class="account-info">
             <div class="account-name">${acc.name}</div>
             <div class="account-meta">
-              <span class="badge-device">${acc.device}</span>
-              <span class="badge-group" style="background-color: ${colors.bg}; color: ${colors.text};">
-                ${acc.group}
-              </span>
+              <span class="meta-label">機種: ${acc.device}</span>
+              <span class="meta-label">［${acc.group}］</span>
             </div>
           </div>
           <div class="account-controls">
             <div class="sort-btns">
-              <button class="btn-sort" onclick="moveAccount(${acc.id}, 'up')" ${isFirst ? 'disabled' : ''}>↑</button>
-              <button class="btn-sort" onclick="moveAccount(${acc.id}, 'down')" ${isLast ? 'disabled' : ''}>↓</button>
+              <button class="btn-sort" onclick="moveAccount(${acc.id}, 'up')" ${isFirst ? 'disabled' : ''}>▲</button>
+              <button class="btn-sort" onclick="moveAccount(${acc.id}, 'down')" ${isLast ? 'disabled' : ''}>▼</button>
             </div>
             <input type="number" value="${acc.candles}" onchange="updateSingleCandle(${acc.id}, this.value)">
+            <button class="btn-orange btn-icon" onclick="startEdit(${acc.id})">編集</button>
             <button class="btn-red btn-icon" onclick="deleteAccount(${acc.id})">削除</button>
           </div>
         `;
         listContainer.appendChild(item);
       });
 
-      // グループ選択プルダウンの更新
+      // プルダウン更新
       const select = document.getElementById('batch-target');
       const currentTarget = select.value;
 
