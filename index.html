@@ -3,151 +3,292 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>キャンドル・アカウント管理</title>
+  <title>Account Manager</title>
   <style>
-    /* 画面のデザイン（CSS） */
+    /* iOS風デザインの定義（CSS） */
+    :root {
+      --ios-blue: #007aff;
+      --ios-green: #34c759;
+      --ios-red: #ff3b30;
+      --ios-bg: #f2f2f7;
+      --ios-card: #ffffff;
+      --ios-text: #000000;
+      --ios-secondary-text: #8e8e93;
+      --ios-input-bg: #e5e5ea;
+    }
+
     body {
-      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-      background-color: #f4f7f6;
-      color: #333;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--ios-bg);
+      color: var(--ios-text);
       margin: 0;
-      padding: 20px;
+      padding: 20px 10px;
+      -webkit-font-smoothing: antialiased;
     }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
     h1 {
+      font-size: 28px;
+      font-weight: 700;
       text-align: center;
-      color: #2c3e50;
+      margin-bottom: 24px;
+      color: var(--ios-text);
     }
+
     h2 {
-      font-size: 1.2rem;
-      color: #34495e;
-      border-bottom: 2px solid #3498db;
-      padding-bottom: 5px;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--ios-secondary-text);
+      text-transform: uppercase;
+      margin: 20px 0 8px 12px;
+      letter-spacing: 0.5px;
     }
+
+    /* iOS風カード */
     .card {
-      background: #ffffff;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      max-width: 900px;
-      margin-left: auto;
-      margin-right: auto;
+      background-color: var(--ios-card);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
+
+    /* フォームパーツ */
     .form-group {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .input-row {
+      display: flex;
       gap: 10px;
-      margin-bottom: 10px;
-      align-items: center;
     }
+
+    .input-row input {
+      flex: 1;
+    }
+
     input[type="text"], input[type="number"], select {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-    button {
-      padding: 8px 16px;
-      background-color: #3498db;
-      color: white;
+      background-color: var(--ios-input-bg);
       border: none;
-      border-radius: 4px;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 16px; /* iOSのズーム防止のため16px以上 */
+      color: var(--ios-text);
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    input::placeholder {
+      color: #a9a9b3;
+    }
+
+    /* ボタン類 */
+    button {
+      background-color: var(--ios-blue);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.2s;
+      transition: opacity 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
-    button:hover {
-      background-color: #2980b9;
+
+    button:active {
+      opacity: 0.7;
     }
-    .btn-danger {
-      background-color: #e74c3c;
+
+    .btn-block {
+      width: 100%;
     }
-    .btn-danger:hover {
-      background-color: #c0392b;
-    }
-    .btn-action {
-      background-color: #2ecc71;
-    }
-    .btn-action:hover {
-      background-color: #27ae60;
+
+    .btn-green { background-color: var(--ios-green); }
+    .btn-red { background-color: var(--ios-red); }
+    
+    /* 一括操作エリア */
+    .batch-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     
-    table {
+    .batch-actions select {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .shortcut-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .custom-batch {
+      display: flex;
+      gap: 8px;
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 8px;
     }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: center;
+    .custom-batch input {
+      flex: 1;
     }
-    th {
-      background-color: #f8f9fa;
-      font-weight: bold;
+
+    /* リスト・テーブル形式 */
+    .account-list {
+      display: flex;
+      flex-direction: column;
     }
-    td input[type="number"] {
+
+    .account-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 4px;
+      border-bottom: 1px solid #ededf0;
+    }
+
+    .account-item:last-child {
+      border-bottom: none;
+    }
+
+    .account-info {
+      flex: 1;
+    }
+
+    .account-name {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .account-meta {
+      font-size: 13px;
+      color: var(--ios-secondary-text);
+    }
+
+    .account-meta span {
+      margin-right: 8px;
+      background: #f2f2f7;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .account-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .account-controls input[type="number"] {
       width: 80px;
+      text-align: right;
+      padding: 8px;
+      background-color: var(--ios-input-bg);
+    }
+
+    .btn-icon {
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: normal;
+      border-radius: 6px;
+    }
+
+    .empty-state {
       text-align: center;
+      color: var(--ios-secondary-text);
+      padding: 20px 0;
+      font-size: 15px;
     }
   </style>
 </head>
 <body>
 
-  <h1>アカウント管理システム</h1>
+  <div class="container">
+    <h1>アカウント管理</h1>
 
-  <div class="card">
     <h2>新規アカウント登録</h2>
-    <div class="form-group">
-      <input type="text" id="input-name" placeholder="アカウント名 (必須)" required>
-      <input type="text" id="input-device" placeholder="使用機種 (例: iPhone15)">
-      <input type="text" id="input-group" placeholder="グループ名 (例: メイン, サブ)">
-      <input type="number" id="input-candles" placeholder="初期キャンドル数" value="0">
-      <button onclick="addAccount()">登録する</button>
+    <div class="card">
+      <div class="form-group">
+        <input type="text" id="input-name" placeholder="アカウント名 (必須)">
+        <div class="input-row">
+          <input type="text" id="input-device" placeholder="機種 (例: iPhone 15)">
+          <input type="text" id="input-group" placeholder="グループ (例: メイン)">
+        </div>
+        <input type="number" id="input-candles" placeholder="初期キャンドル数" value="0">
+        <button class="btn-block" onclick="addAccount()">アカウントを追加</button>
+      </div>
     </div>
-  </div>
 
-  <div class="card">
     <h2>キャンドル数 一括変更</h2>
-    <div class="form-group">
-      <label for="batch-target">対象:</label>
-      <select id="batch-target">
-        <option value="ALL">全体（すべてのアカウント）</option>
-        </select>
-      
-      <span style="margin-left: 15px;">変動値:</span>
-      <button class="btn-action" onclick="applyBatchChange(3)">+3</button>
-      <button class="btn-action" onclick="applyBatchChange(-6)">-6</button>
-      
-      <span style="margin-left: 15px;">または任意入力:</span>
-      <input type="number" id="batch-custom-value" placeholder="例: 10, -5" style="width: 100px;">
-      <button onclick="applyCustomBatchChange()">適用</button>
+    <div class="card">
+      <div class="form-group">
+        <div class="batch-actions">
+          <select id="batch-target">
+            <option value="ALL">全体（すべて）</option>
+          </select>
+          <div class="shortcut-btns">
+            <button class="btn-green" onclick="applyBatchChange(3)">+3</button>
+            <button class="btn-red" onclick="applyBatchChange(-6)">-6</button>
+          </div>
+        </div>
+        <div class="custom-batch">
+          <input type="number" id="batch-custom-value" placeholder="任意の数値を入力 (例: 10, -5)">
+          <button onclick="applyCustomBatchChange()">適用</button>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="card">
     <h2>登録アカウント一覧</h2>
-    <table id="account-table">
-      <thead>
-        <tr>
-          <th>アカウント名</th>
-          <th>使用機種</th>
-          <th>グループ</th>
-          <th>キャンドル数</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        </tbody>
-    </table>
+    <div class="card">
+      <div id="account-list" class="account-list">
+        </div>
+    </div>
   </div>
 
   <script>
-    // アカウントのデータを保存する配列
+    // キーネーム（ローカルストレージ用）
+    const STORAGE_KEY = 'ios_account_manager_data';
+
+    // データの読み込み、または初期化
     let accounts = [];
     let nextId = 1;
 
-    // 1. アカウントを追加する機能
+    // 起動時にローカルストレージからデータを読み込む関数
+    function loadData() {
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          accounts = parsed.accounts || [];
+          nextId = parsed.nextId || 1;
+        } catch (e) {
+          console.error("データの読み込みに失敗しました。データを初期化します。", e);
+          accounts = [];
+          nextId = 1;
+        }
+      }
+    }
+
+    // ローカルストレージにデータを保存する関数
+    function saveData() {
+      const dataToSave = {
+        accounts: accounts,
+        nextId: nextId
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    }
+
+    // アカウントを追加
     function addAccount() {
       const name = document.getElementById('input-name').value.trim();
       const device = document.getElementById('input-device').value.trim() || '未指定';
@@ -155,11 +296,10 @@
       const candles = parseInt(document.getElementById('input-candles').value) || 0;
 
       if (!name) {
-        alert('アカウント名は必ず入力してください。');
+        alert('アカウント名は必須です。');
         return;
       }
 
-      // データを配列に追加
       accounts.push({
         id: nextId++,
         name: name,
@@ -168,33 +308,35 @@
         candles: candles
       });
 
-      // 入力欄をリセット
+      // 入力欄リセット
       document.getElementById('input-name').value = '';
       document.getElementById('input-device').value = '';
       document.getElementById('input-group').value = '';
       document.getElementById('input-candles').value = '0';
 
-      // 画面を更新
-      render();
+      saveData(); // 保存
+      render();   // 描画更新
     }
 
-    // 2. 個別のキャンドル数を直接変更したときの処理
+    // 個別のキャンドル数変更
     function updateSingleCandle(id, value) {
       const account = accounts.find(acc => acc.id === id);
       if (account) {
         account.candles = parseInt(value) || 0;
+        saveData(); // 変更時にすぐ保存
       }
     }
 
-    // 3. アカウントを削除する機能
+    // アカウント削除
     function deleteAccount(id) {
-      if (confirm('本当にこのアカウントを削除しますか？')) {
+      if (confirm('このアカウントを削除してもよろしいですか？')) {
         accounts = accounts.filter(acc => acc.id !== id);
-        render();
+        saveData(); // 保存
+        render();   // 描画更新
       }
     }
 
-    // 4. 一括変更の機能（+3, -6 などのボタン用）
+    // 一括変更
     function applyBatchChange(amount) {
       const targetGroup = document.getElementById('batch-target').value;
       
@@ -204,10 +346,11 @@
         }
       });
       
-      render();
+      saveData(); // 保存
+      render();   // 描画更新
     }
 
-    // 5. 任意の入力値で一括変更する機能
+    // 任意入力での一括変更
     function applyCustomBatchChange() {
       const customValue = parseInt(document.getElementById('batch-custom-value').value);
       if (isNaN(customValue)) {
@@ -215,41 +358,49 @@
         return;
       }
       applyBatchChange(customValue);
-      document.getElementById('batch-custom-value').value = ''; // 入力欄リセット
+      document.getElementById('batch-custom-value').value = '';
     }
 
-    // 6. 画面（表とグループ選択肢）を書き換える機能
+    // 画面の構築・更新
     function render() {
-      const tbody = document.querySelector('#account-table tbody');
-      tbody.innerHTML = ''; // 表を一度空にする
+      const listContainer = document.getElementById('account-list');
+      listContainer.innerHTML = '';
 
-      const groups = new Set(); // 重複なしでグループ名を保存するためのセット
+      if (accounts.length === 0) {
+        listContainer.innerHTML = '<div class="empty-state">アカウントが登録されていません</div>';
+        document.getElementById('batch-target').innerHTML = '<option value="ALL">全体（すべて）</option>';
+        return;
+      }
 
-      // アカウントごとに表の行(tr)を作成
+      const groups = new Set();
+
+      // アカウントリストの生成
       accounts.forEach(acc => {
-        groups.add(acc.group); // グループ名を記録
+        groups.add(acc.group);
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${acc.name}</td>
-          <td>${acc.device}</td>
-          <td>${acc.group}</td>
-          <td>
+        const item = document.createElement('div');
+        item.className = 'account-item';
+        item.innerHTML = `
+          <div class="account-info">
+            <div class="account-name">${acc.name}</div>
+            <div class="account-meta">
+              <span>${acc.device}</span>
+              <span>${acc.group}</span>
+            </div>
+          </div>
+          <div class="account-controls">
             <input type="number" value="${acc.candles}" onchange="updateSingleCandle(${acc.id}, this.value)">
-          </td>
-          <td>
-            <button class="btn-danger" onclick="deleteAccount(${acc.id})">削除</button>
-          </td>
+            <button class="btn-red btn-icon" onclick="deleteAccount(${acc.id})">削除</button>
+          </div>
         `;
-        tbody.appendChild(tr);
+        listContainer.appendChild(item);
       });
 
       // グループ選択プルダウンの更新
       const select = document.getElementById('batch-target');
-      const currentTarget = select.value; // 現在選ばれているものを記憶
+      const currentTarget = select.value;
 
-      select.innerHTML = '<option value="ALL">全体（すべてのアカウント）</option>';
-      
+      select.innerHTML = '<option value="ALL">全体（すべて）</option>';
       groups.forEach(groupName => {
         const option = document.createElement('option');
         option.value = groupName;
@@ -257,11 +408,16 @@
         select.appendChild(option);
       });
 
-      // 以前選ばれていたグループがまだ存在すれば、選択状態を復元する
       if (Array.from(select.options).some(opt => opt.value === currentTarget)) {
         select.value = currentTarget;
       }
     }
+
+    // ページ読み込み時の初期動作
+    window.onload = function() {
+      loadData(); // ローカルストレージから読み込み
+      render();   // 画面に表示
+    };
   </script>
 </body>
 </html>
