@@ -332,7 +332,7 @@
     <div class="card">
       <div class="form-group">
         <div class="batch-actions">
-          <select id="batch-target" onchange="renderBatchNote()" aria-label="一括変更の対象">
+          <select id="batch-target" onchange="onBatchTargetChange()" aria-label="一括変更の対象">
             <option value="ALL">全体（すべて）</option>
           </select>
           <div class="shortcut-btns">
@@ -658,9 +658,17 @@
       return accounts.filter(acc => targetGroup === 'ALL' || acc.group === targetGroup);
     }
     function renderBatchNote() {
+      const targetGroup = document.getElementById('batch-target').value;
       const n = batchTargets().length;
       document.getElementById('batch-note').innerHTML =
-        '対象は <b>' + n + '件</b> です。適用すると対象アカウントのキャンドル数がまとめて増減します（0未満にはなりません）。';
+        '対象は <b>' + n + '件</b> です。適用すると対象アカウントのキャンドル数がまとめて増減します（0未満にはなりません）。' +
+        (targetGroup === 'ALL' ? '' : '<br>下の登録一覧もこのグループで絞り込んで表示しています。');
+    }
+    // 一括変更の対象グループを選んだら、下の登録一覧の表示も同じグループに連動させる
+    // （「全体」に戻せば一覧も全表示に戻る）。一覧側のチップ操作は今までどおり単独でも使える。
+    function onBatchTargetChange() {
+      setGroupFilter(document.getElementById('batch-target').value);
+      renderBatchNote();
     }
     function applyBatchChange(amount) {
       const targets = batchTargets();
