@@ -217,6 +217,7 @@
       background: var(--chip-bg); color: var(--blue); box-shadow: none;
     }
     .step-btn.minus { color: var(--red); }
+    .step-btn.wide { width: auto; padding: 0 11px; font-size: 14.5px; }
     .candle-input {
       width: 74px !important; text-align: center; padding: 7px 4px !important;
       font-size: 21px !important; font-weight: 800; font-variant-numeric: tabular-nums;
@@ -897,6 +898,7 @@
           '</div>' +
           '<div class="account-side">' +
             '<div class="candle-stepper">' +
+              '<button type="button" class="step-btn wide minus" onclick="stepCandle(' + acc.id + ', -3)" aria-label="' + esc(acc.name) + 'のキャンドルを3減らす">−3</button>' +
               '<button type="button" class="step-btn minus" onclick="stepCandle(' + acc.id + ', -1)" aria-label="' + esc(acc.name) + 'のキャンドルを1減らす">−</button>' +
               '<input type="number" class="candle-input" value="' + (acc.candles || 0) + '" min="0" ' +
                 'onchange="updateSingleCandle(' + acc.id + ', this.value)" aria-label="' + esc(acc.name) + 'のキャンドル数">' +
