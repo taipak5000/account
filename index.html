@@ -93,6 +93,10 @@
       font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
     }
     .hero-total-value .unit { font-size: 18px; font-weight: 700; margin-left: 3px; }
+    .hero-hearts { padding-bottom: 6px; }
+    .hero-hearts-value { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
+    .hero-hearts-value .approx, .hero-hearts-value .unit { font-size: 13px; font-weight: 700; margin: 0 2px; }
+    .hero-hearts-label { font-size: 11px; color: rgba(255, 255, 255, 0.66); margin-top: 1px; }
     .hero-mini { padding-bottom: 6px; }
     .hero-mini-value { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
     .hero-mini-label { font-size: 11px; color: rgba(255, 255, 255, 0.66); margin-top: 1px; }
@@ -225,6 +229,7 @@
     }
     .candle-input:hover { border-color: var(--input-border) !important; }
     .candle-input:focus { background: var(--input-bg) !important; border-color: var(--blue) !important; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15); }
+    .meta-chip.heart-est { font-weight: 700; font-variant-numeric: tabular-nums; }
     .candle-unit { font-size: 11px; color: var(--text-3); font-weight: 700; margin-left: -3px; }
     .row-actions { display: flex; align-items: center; gap: 4px; }
     .row-actions .sort-btns { display: flex; gap: 4px; margin-right: 2px; }
@@ -287,6 +292,10 @@
         <div>
           <div class="hero-total-label">キャンドル合計</div>
           <div class="hero-total-value"><span id="stat-total">0</span><span class="unit">本</span></div>
+        </div>
+        <div class="hero-hearts" title="各アカウントのキャンドル数 ÷ 3（端数切り捨て）の合計">
+          <div class="hero-hearts-value">💗<span class="approx">約</span><span id="stat-hearts">0</span><span class="unit">個</span></div>
+          <div class="hero-hearts-label">ハートを送れる</div>
         </div>
         <div class="hero-mini">
           <div class="hero-mini-value" id="stat-accounts">0</div>
@@ -486,16 +495,19 @@
       return map;
     }
     function groupNames() { return Array.from(groupColorMap().keys()); }
+    // ハート1個 = キャンドル3本。アカウントごとに端数を切り捨てる
+    function heartsFor(candles) { return Math.floor((candles || 0) / 3); }
     function totals() {
-      let total = 0;
+      let total = 0, hearts = 0;
       const perGroup = new Map();
       accounts.forEach(acc => {
         total += acc.candles || 0;
+        hearts += heartsFor(acc.candles);
         const g = perGroup.get(acc.group) || { count: 0, total: 0 };
         g.count++; g.total += acc.candles || 0;
         perGroup.set(acc.group, g);
       });
-      return { total, perGroup };
+      return { total, hearts, perGroup };
     }
     function takeUndoSnapshot() {
       undoSnapshot = JSON.stringify({ accounts: accounts, nextId: nextId });
@@ -619,6 +631,8 @@
         account.candles = clampCandles(parseInt(value) || 0);
         saveData();
         renderSummaryAndChips();
+        const h = document.getElementById('hearts-' + id);
+        if (h) h.textContent = '💗 約' + heartsFor(account.candles).toLocaleString() + '個';
       }
     }
     function stepCandle(id, delta) {
@@ -814,6 +828,7 @@
     function renderSummaryAndChips() {
       const t = totals();
       document.getElementById('stat-total').textContent = t.total.toLocaleString();
+      document.getElementById('stat-hearts').textContent = t.hearts.toLocaleString();
       document.getElementById('stat-accounts').textContent = accounts.length.toLocaleString();
       document.getElementById('stat-groups').textContent = t.perGroup.size.toLocaleString();
       renderGroupChips();
@@ -902,6 +917,7 @@
               '<span class="meta-chip">📱 ' + esc(acc.device) + '</span>' +
               '<span class="meta-chip group" style="background:' + c.bg + '; color:' + c.text + '">' +
                 '<span class="gdot" style="background:' + c.text + '"></span>' + esc(acc.group) + '</span>' +
+              '<span class="meta-chip heart-est" id="hearts-' + acc.id + '" title="キャンドル数 ÷ 3（端数切り捨て）">💗 約' + heartsFor(acc.candles).toLocaleString() + '個</span>' +
             '</div>' +
           '</div>' +
           '<div class="account-side">' +

@@ -36,6 +36,12 @@ const doc = window.document;
 
 // 1) 旧データがそのまま読めて集計が合う
 eq(doc.getElementById('stat-total').textContent, '165', 'total = 120+45+0');
+eq(doc.getElementById('stat-hearts').textContent, '55', 'hearts = floor(120/3)+floor(45/3)+0');
+eq(doc.getElementById('hearts-1').textContent, '💗 約40個', 'per-account hearts');
+window.updateSingleCandle(1, '122');
+eq(doc.getElementById('hearts-1').textContent, '💗 約40個', 'hearts floor 122/3');
+eq(doc.getElementById('stat-hearts').textContent, '55', 'total hearts after 122');
+window.updateSingleCandle(1, '120');
 eq(doc.getElementById('stat-accounts').textContent, '3', 'account count');
 eq(doc.getElementById('stat-groups').textContent, '2', 'group count');
 eq(doc.querySelectorAll('.account-item').length, 3, 'rows rendered');
