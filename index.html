@@ -243,7 +243,7 @@
     .btn-sort:disabled { color: var(--text-3); cursor: not-allowed; filter: none; }
     .btn-text {
       background: none; color: var(--blue); box-shadow: none; padding: 5px 8px;
-      font-size: 13px; font-weight: 700; border-radius: 7px;
+      font-size: 13px; font-weight: 700; border-radius: 7px; white-space: nowrap;
     }
     .btn-text.danger { color: var(--red); }
     .btn-text:hover { background: var(--chip-bg); filter: none; }
@@ -275,7 +275,14 @@
     @media (max-width: 480px) {
       .hero-total-value { font-size: 38px; }
       .account-item { flex-wrap: wrap; }
-      .account-side { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
+      /* 狭い画面では1行に収まるよう詰め、それでも足りなければ操作ボタンごと次の行へ送る */
+      .account-side { flex-direction: row; flex-wrap: wrap; align-items: center; width: 100%; justify-content: space-between; gap: 7px 4px; }
+      .candle-stepper { gap: 4px; }
+      .step-btn { width: 30px; }
+      .step-btn.wide { padding: 0 8px; }
+      .row-actions { gap: 2px; margin-left: auto; flex-shrink: 0; }
+      .row-actions .sort-btns { gap: 3px; margin-right: 0; }
+      .btn-text { padding: 5px 4px; }
     }
   </style>
 </head>
