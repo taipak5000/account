@@ -223,10 +223,13 @@
     .step-btn.minus { color: var(--red); }
     .step-btn.wide { width: auto; padding: 0 11px; font-size: 14.5px; }
     .candle-input {
-      width: 74px !important; text-align: center; padding: 7px 4px !important;
+      width: 74px !important; text-align: center; padding: 7px 2px !important;
       font-size: 21px !important; font-weight: 800; font-variant-numeric: tabular-nums;
       background: transparent !important; border: 1px solid transparent !important; border-radius: 9px !important;
     }
+    /* 増減は横の＋／−ボタンで行うので、桁数を圧迫するブラウザ標準のスピンボタンは隠す */
+    .candle-input { -moz-appearance: textfield; appearance: textfield; }
+    .candle-input::-webkit-outer-spin-button, .candle-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .candle-input:hover { border-color: var(--input-border) !important; }
     .candle-input:focus { background: var(--input-bg) !important; border-color: var(--blue) !important; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15); }
     .meta-chip.heart-est { font-weight: 700; font-variant-numeric: tabular-nums; }
