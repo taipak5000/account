@@ -725,8 +725,9 @@
         '対象は <b>' + n + '件</b> です。適用すると対象アカウントのキャンドル数がまとめて増減します（0未満にはなりません）。' +
         (targetGroup === 'ALL' ? '' : '<br>下の登録一覧もこのグループで絞り込んで表示しています。');
     }
-    // 一括変更の対象グループを選んだら、下の登録一覧の表示も同じグループに連動させる
-    // （「全体」に戻せば一覧も全表示に戻る）。一覧側のチップ操作は今までどおり単独でも使える。
+    // 一括変更の対象と登録一覧のグループ選択は双方向に連動させる。
+    // どちらで選んでも ui.groupFilter が唯一の状態になり、もう片方へ反映される
+    // （「全体」「すべて」に戻せば両方とも全体に戻る）。
     function onBatchTargetChange() {
       setGroupFilter(document.getElementById('batch-target').value);
       renderBatchNote();
@@ -843,6 +844,13 @@
       saveUi();
       renderGroupChips();
       renderList();
+      syncBatchTarget();
+    }
+    // 一覧で選んだグループを一括変更の対象プルダウンにも反映する
+    function syncBatchTarget() {
+      const select = document.getElementById('batch-target');
+      select.value = Array.from(select.options).some(opt => opt.value === ui.groupFilter) ? ui.groupFilter : 'ALL';
+      renderBatchNote();
     }
     function clearListFilters() {
       searchQuery = '';
@@ -909,7 +917,6 @@
     }
     function renderBatchTargets() {
       const select = document.getElementById('batch-target');
-      const currentTarget = select.value;
       select.innerHTML = '<option value="ALL">全体（すべて）</option>';
       groupNames().forEach(groupName => {
         const option = document.createElement('option');
@@ -917,8 +924,7 @@
         option.textContent = 'グループ: ' + groupName;
         select.appendChild(option);
       });
-      if (Array.from(select.options).some(opt => opt.value === currentTarget)) select.value = currentTarget;
-      renderBatchNote();
+      syncBatchTarget();
     }
 
     function renderList() {

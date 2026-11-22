@@ -115,5 +115,12 @@ eq(window.validateImport({ foo: 1 }), null, 'validateImport rejects wrong shape'
 eq(window.validateImport({ accounts: [{ id: 'x', name: 'a' }] }), null, 'validateImport rejects bad id');
 eq(window.validateImport({ accounts: [{ id: 5, name: 'a', candles: -3 }] }).accounts[0].candles, 0, 'validateImport clamps negatives');
 
+// 12) 一覧のグループ選択 → 一括変更の対象にも反映（双方向連動）
+window.setGroupFilter('予備');
+eq(doc.getElementById('batch-target').value, '予備', 'list group chip syncs batch target');
+doc.getElementById('batch-target').value = 'ALL';
+window.onBatchTargetChange();
+eq(doc.querySelector('.group-chip.active').textContent.startsWith('すべて'), true, 'batch target ALL syncs list chips');
+
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASS');
 process.exit(failures ? 1 : 0);
