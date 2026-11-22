@@ -198,6 +198,12 @@
     .toolbar-row select { width: auto; flex-shrink: 0; max-width: 46%; }
     .group-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
     .group-chips::-webkit-scrollbar { display: none; }
+    /* マウス操作の端末（パソコン）では横スクロールが隠れて押しにくいので、
+       全グループを折り返して一度に見せる。タッチ端末は従来どおり横スワイプ */
+    @media (hover: hover) and (pointer: fine) {
+      .group-chips { flex-wrap: wrap; overflow-x: visible; padding-bottom: 2px; }
+      .group-chip:hover { border-color: var(--blue); }
+    }
     .group-chip {
       flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px;
       background: var(--card); border: 1.5px solid var(--card-border); color: var(--text);
@@ -991,6 +997,14 @@
       wrap.querySelectorAll('[data-group]').forEach(btn => {
         btn.addEventListener('click', () => setGroupFilter(btn.getAttribute('data-group')));
       });
+      // 横スクロール表示のとき、選択中のチップが画面外に隠れないよう見える位置へ寄せる
+      const active = wrap.querySelector('.group-chip.active');
+      if (active && wrap.scrollWidth > wrap.clientWidth) {
+        const left = active.offsetLeft - wrap.offsetLeft;
+        if (left < wrap.scrollLeft || left + active.offsetWidth > wrap.scrollLeft + wrap.clientWidth) {
+          wrap.scrollLeft = Math.max(0, left - 16);
+        }
+      }
     }
     function renderDatalists() {
       const devices = Array.from(new Set(accounts.map(a => a.device).filter(d => d && d !== '未指定')));
