@@ -122,5 +122,28 @@ doc.getElementById('batch-target').value = 'ALL';
 window.onBatchTargetChange();
 eq(doc.querySelector('.group-chip.active').textContent.startsWith('すべて'), true, 'batch target ALL syncs list chips');
 
+// 13) メール・メモ: 入力したときだけ保存し、エスケープして表示、編集で消せる
+window.startEdit(1);
+doc.getElementById('input-email').value = ' sub1@example.com ';
+doc.getElementById('input-memo').value = '<img src=x>メモ';
+window.handleSubmit({ preventDefault() {} });
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.accounts[0].email, 'sub1@example.com', 'email saved trimmed');
+eq(saved.accounts[0].memo, '<img src=x>メモ', 'memo saved');
+eq(Object.keys(saved.accounts[1]).sort(), ['candles', 'device', 'group', 'id', 'name'], 'accounts without extras keep old shape');
+eq(doc.querySelectorAll('#account-list img').length, 0, 'memo html escaped');
+ok(doc.querySelector('.extra-email').textContent.includes('sub1@example.com'), 'email shown in list');
+window.onSearchInput('example.com');
+eq(doc.querySelectorAll('.account-item').length, 1, 'search matches email');
+window.onSearchInput('');
+eq(window.validateImport({ accounts: [{ id: 1, name: 'a', email: 'x@y', memo: 'm' }] }).accounts[0].email, 'x@y', 'import keeps email');
+window.startEdit(1);
+eq(doc.getElementById('input-email').value, 'sub1@example.com', 'edit form loads email');
+doc.getElementById('input-email').value = '';
+doc.getElementById('input-memo').value = '';
+window.handleSubmit({ preventDefault() {} });
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(Object.keys(saved.accounts[0]).sort(), ['candles', 'device', 'group', 'id', 'name'], 'clearing extras removes keys');
+
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASS');
 process.exit(failures ? 1 : 0);

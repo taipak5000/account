@@ -137,7 +137,20 @@
       outline: none;
       font-family: inherit;
     }
-    input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.18); background: var(--card); }
+    input[type="email"], textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      font-size: 16px;
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+    .field-hint { font-size: 11px; color: var(--text-3); margin: 4px 0 0 2px; }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.18); background: var(--card); }
     input::placeholder { color: var(--text-3); }
     .form-error { display: none; font-size: 13px; color: var(--red); font-weight: 600; margin: -2px 0 0 2px; }
     .form-error.show { display: block; }
@@ -217,6 +230,22 @@
       max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .meta-chip.group { font-weight: 700; }
+    /* メール・メモ（入力があるアカウントだけ表示） */
+    .account-extra { margin-top: 7px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .extra-email {
+      align-self: flex-start; max-width: 100%;
+      display: inline-flex; align-items: center; gap: 5px;
+      font: inherit; font-size: 12.5px; color: var(--blue);
+      background: none; border: none; padding: 0; cursor: pointer;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .extra-email .email-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .extra-email .copy-hint { font-size: 10.5px; color: var(--text-3); font-weight: 600; flex-shrink: 0; }
+    .extra-memo {
+      font-size: 12px; color: var(--text-2); line-height: 1.45;
+      white-space: pre-wrap; overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
     .account-side { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex-shrink: 0; }
     .candle-stepper { display: flex; align-items: center; gap: 6px; }
     .step-btn {
@@ -347,6 +376,15 @@
           <label for="input-candles">キャンドル数</label>
           <input type="number" id="input-candles" value="0" min="0">
         </div>
+        <div class="field">
+          <label for="input-email">メールアドレス</label>
+          <input type="email" id="input-email" placeholder="例: sub1@example.com" autocomplete="off" inputmode="email">
+        </div>
+        <div class="field">
+          <label for="input-memo">メモ</label>
+          <textarea id="input-memo" rows="2" placeholder="例: ログイン方法、フレンド名、Apple ID など"></textarea>
+          <p class="field-hint">この端末のブラウザ内にだけ保存されます。パスワードそのものは書かないでください。</p>
+        </div>
         <p class="form-error" id="form-error">アカウント名を入力してください。</p>
         <button type="submit" class="btn-block btn-primary-grad" id="btn-submit">アカウントを追加</button>
         <button type="button" class="btn-block btn-gray" id="btn-cancel-edit" onclick="cancelEdit()" style="display: none;">編集をキャンセル</button>
@@ -378,7 +416,7 @@
       <div class="group-chips" id="group-chips"></div>
       <div class="toolbar-row">
         <div class="search-wrap">
-          <input type="text" id="input-search" placeholder="名前・機種・グループで検索" autocomplete="off" oninput="onSearchInput(this.value)">
+          <input type="text" id="input-search" placeholder="名前・グループ・メール・メモで検索" autocomplete="off" oninput="onSearchInput(this.value)">
         </div>
         <select id="select-sort" onchange="onSortChange(this.value)" aria-label="並び順">
           <option value="manual">手動の並び順</option>
@@ -409,7 +447,8 @@
     /* ============================================================
        データ保存について（互換性の約束）
        - 保存キーとJSONの形は旧バージョンと完全に同一：
-         localStorage['ios_account_manager_data_v3'] = { accounts: [{id, name, device, group, candles}], nextId }
+         localStorage['ios_account_manager_data_v3'] = { accounts: [{id, name, device, group, candles, email?, memo?}], nextId }
+         （email・memo は入力があるときだけ持つ。旧データと旧バージョンはそのまま読める）
        - 旧バージョンで保存したデータはそのまま読み込め、書き出した
          バックアップファイルも相互に互換。
        - 画面の好み（テーマ・並び順・フィルター）は別のキー
@@ -603,6 +642,8 @@
       const device = document.getElementById('input-device').value.trim() || '未指定';
       const group = document.getElementById('input-group').value.trim() || '未分類';
       const candles = clampCandles(parseInt(document.getElementById('input-candles').value) || 0);
+      const email = document.getElementById('input-email').value.trim();
+      const memo = document.getElementById('input-memo').value.trim();
       const errEl = document.getElementById('form-error');
 
       if (!name) {
@@ -619,17 +660,26 @@
           account.device = device;
           account.group = group;
           account.candles = candles;
+          setExtras(account, email, memo);
         }
         cancelEdit();
         showToast('変更を保存しました');
       } else {
-        accounts.push({ id: nextId++, name: name, device: device, group: group, candles: candles });
+        const account = { id: nextId++, name: name, device: device, group: group, candles: candles };
+        setExtras(account, email, memo);
+        accounts.push(account);
         resetForm();
         nameEl.focus();
         showToast('アカウントを追加しました');
       }
       saveData();
       render();
+    }
+
+    // メール・メモは入力があるときだけ保存する（空のアカウントは従来と同じ形のまま）
+    function setExtras(account, email, memo) {
+      if (email) account.email = email; else delete account.email;
+      if (memo) account.memo = memo; else delete account.memo;
     }
 
     function startEdit(id) {
@@ -640,6 +690,8 @@
       document.getElementById('input-device').value = account.device;
       document.getElementById('input-group').value = account.group;
       document.getElementById('input-candles').value = account.candles;
+      document.getElementById('input-email').value = account.email || '';
+      document.getElementById('input-memo').value = account.memo || '';
       document.getElementById('form-title').textContent = 'アカウント情報の編集';
       const submitBtn = document.getElementById('btn-submit');
       submitBtn.textContent = '変更を保存';
@@ -669,6 +721,32 @@
       document.getElementById('input-device').value = '';
       document.getElementById('input-group').value = '';
       document.getElementById('input-candles').value = '0';
+      document.getElementById('input-email').value = '';
+      document.getElementById('input-memo').value = '';
+    }
+
+    // メールアドレスをタップしたらクリップボードへコピーする
+    function copyEmail(id) {
+      const account = accounts.find(acc => acc.id === id);
+      if (!account || !account.email) return;
+      const text = account.email;
+      const done = () => showToast('メールアドレスをコピーしました');
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text) && done());
+      } else if (fallbackCopy(text)) done();
+    }
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove();
+      if (!ok) showToast('コピーできませんでした');
+      return ok;
     }
 
     /* ── 個別のキャンドル変更 ── */
@@ -823,6 +901,9 @@
           group: typeof raw.group === 'string' && raw.group ? raw.group : '未分類',
           candles: clampCandles(parseInt(raw.candles) || 0)
         });
+        setExtras(out[out.length - 1],
+          typeof raw.email === 'string' ? raw.email.trim() : '',
+          typeof raw.memo === 'string' ? raw.memo.trim() : '');
         if (id > maxId) maxId = id;
       }
       const nid = parseInt(parsed.nextId);
@@ -864,7 +945,9 @@
         list = list.filter(acc =>
           (acc.name || '').toLowerCase().includes(searchQuery) ||
           (acc.device || '').toLowerCase().includes(searchQuery) ||
-          (acc.group || '').toLowerCase().includes(searchQuery));
+          (acc.group || '').toLowerCase().includes(searchQuery) ||
+          (acc.email || '').toLowerCase().includes(searchQuery) ||
+          (acc.memo || '').toLowerCase().includes(searchQuery));
       }
       if (ui.sort === 'candles-desc') list.sort((a, b) => (b.candles || 0) - (a.candles || 0));
       else if (ui.sort === 'candles-asc') list.sort((a, b) => (a.candles || 0) - (b.candles || 0));
@@ -972,6 +1055,15 @@
                 '<span class="gdot" style="background:' + c.text + '"></span>' + esc(acc.group) + '</span>' +
               '<span class="meta-chip heart-est" id="hearts-' + acc.id + '" title="キャンドル数 ÷ 3（端数切り捨て）">💗 約' + heartsFor(acc.candles).toLocaleString() + '個</span>' +
             '</div>' +
+            ((acc.email || acc.memo)
+              ? '<div class="account-extra">' +
+                  (acc.email
+                    ? '<button type="button" class="extra-email" onclick="copyEmail(' + acc.id + ')" title="タップでコピー">' +
+                        '✉️ <span class="email-text">' + esc(acc.email) + '</span><span class="copy-hint">コピー</span></button>'
+                    : '') +
+                  (acc.memo ? '<div class="extra-memo">' + esc(acc.memo) + '</div>' : '') +
+                '</div>'
+              : '') +
           '</div>' +
           '<div class="account-side">' +
             '<div class="candle-stepper">' +
