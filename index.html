@@ -198,6 +198,48 @@
     .toolbar-row select { width: auto; flex-shrink: 0; max-width: 46%; }
     .group-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
     .group-chips::-webkit-scrollbar { display: none; }
+    [hidden] { display: none !important; }
+    .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-small { font-size: 13px; padding: 8px 12px; border-radius: 999px; }
+    .btn-ghost[aria-pressed="true"], .btn-ghost[aria-expanded="true"] { background: var(--blue); color: #fff; }
+
+    /* グループの並び替え・名前変更パネル */
+    .group-panel { padding: 8px 12px; }
+    .group-panel-note { font-size: 12px; color: var(--text-2); margin: 4px 2px 6px; line-height: 1.5; }
+    .gp-row { display: flex; align-items: center; gap: 8px; padding: 7px 2px; border-top: 1px solid var(--card-border); }
+    .gp-row:first-of-type { border-top: none; }
+    .gp-name { flex: 1; min-width: 0; font-weight: 700; font-size: 14.5px; display: flex; align-items: center; gap: 6px; }
+    .gp-name .gp-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gp-count { font-size: 11.5px; color: var(--text-2); font-weight: 600; flex-shrink: 0; }
+    .gp-btns { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
+
+    /* 複数選択モード */
+    .row-check { display: flex; align-items: center; flex-shrink: 0; cursor: pointer; padding: 4px; margin: -4px 0 -4px -4px; }
+    .row-check input { width: 22px; height: 22px; accent-color: var(--blue); cursor: pointer; margin: 0; }
+    .account-item.selected { outline: 2px solid var(--blue); outline-offset: -1px; }
+    body.selecting { padding-bottom: calc(var(--bulk-h, 200px) + 16px); }
+    body.selecting .toast { bottom: calc(var(--bulk-h, 200px) + 12px); }
+    .bulk-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+      background: var(--card); border-top: 1px solid var(--card-border);
+      box-shadow: 0 -10px 30px -12px rgba(0, 0, 0, 0.35);
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    }
+    .bulk-inner { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+    .bulk-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+    .bulk-count { font-size: 13.5px; color: var(--text-2); font-weight: 600; }
+    .bulk-count b { font-size: 17px; color: var(--text); font-variant-numeric: tabular-nums; margin-right: 1px; }
+    .bulk-head-btns { display: flex; gap: 2px; margin-left: auto; }
+    .btn-text.strong { background: var(--blue); color: #fff; }
+    .btn-text.strong:hover { background: var(--blue); filter: brightness(1.07); }
+    .bulk-row { display: flex; align-items: center; gap: 6px; }
+    .bulk-label { font-size: 12px; font-weight: 700; color: var(--text-2); width: 62px; flex-shrink: 0; }
+    .bulk-row input { flex: 1; min-width: 0; padding: 9px 10px; }
+    .bulk-quick { padding: 9px 0; width: 46px; flex-shrink: 0; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+    .bulk-apply { padding: 9px 14px; font-size: 14.5px; flex-shrink: 0; }
+    .bulk-foot { display: flex; justify-content: flex-end; margin-top: -4px; }
+    .bulk-bar button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; transform: none; }
+
     /* マウス操作の端末（パソコン）では横スクロールが隠れて押しにくいので、
        全グループを折り返して一度に見せる。タッチ端末は従来どおり横スワイプ */
     @media (hover: hover) and (pointer: fine) {
@@ -311,6 +353,9 @@
     .footer-note { text-align: center; font-size: 11.5px; color: var(--text-3); line-height: 1.7; margin-top: 26px; }
 
     @media (max-width: 480px) {
+      .bulk-label { width: auto; font-size: 11px; }
+      .bulk-quick { width: 40px; }
+      .bulk-apply { padding: 9px 11px; }
       .hero-total-value { font-size: 38px; }
       .account-item { flex-wrap: wrap; }
       /* 狭い画面では1行に収まるよう詰め、それでも足りなければ操作ボタンごと次の行へ送る */
@@ -420,12 +465,18 @@
     <h2>登録アカウント一覧 <span class="h2-note" id="list-count"></span></h2>
     <div class="toolbar">
       <div class="group-chips" id="group-chips"></div>
+      <div class="toolbar-actions">
+        <button type="button" class="btn-ghost btn-small" id="btn-group-panel" onclick="toggleGroupPanel()" aria-expanded="false">⇅ グループの並び替え・名前変更</button>
+        <button type="button" class="btn-ghost btn-small" id="btn-select-mode" onclick="toggleSelectMode()" aria-pressed="false">☑ 選択して一括操作</button>
+      </div>
+      <div class="card group-panel" id="group-panel" hidden></div>
       <div class="toolbar-row">
         <div class="search-wrap">
           <input type="text" id="input-search" placeholder="名前・グループ・メール・メモで検索" autocomplete="off" oninput="onSearchInput(this.value)">
         </div>
         <select id="select-sort" onchange="onSortChange(this.value)" aria-label="並び順">
           <option value="manual">手動の並び順</option>
+          <option value="group">グループ順</option>
           <option value="candles-desc">キャンドル多い順</option>
           <option value="candles-asc">キャンドル少ない順</option>
           <option value="name">名前順</option>
@@ -433,6 +484,35 @@
       </div>
     </div>
     <div id="account-list" class="account-list"></div>
+
+    <!-- 複数選択時の一括操作バー（画面下に固定） -->
+    <div class="bulk-bar" id="bulk-bar" hidden>
+      <div class="bulk-inner">
+        <div class="bulk-head">
+          <span class="bulk-count"><b id="bulk-count">0</b>件選択中</span>
+          <span class="bulk-head-btns">
+            <button type="button" class="btn-text" onclick="selectAllVisible()">表示中をすべて選択</button>
+            <button type="button" class="btn-text" onclick="clearSelection()">解除</button>
+            <button type="button" class="btn-text strong" onclick="toggleSelectMode()">完了</button>
+          </span>
+        </div>
+        <div class="bulk-row">
+          <span class="bulk-label">キャンドル</span>
+          <button type="button" class="btn-green bulk-quick" onclick="bulkCandle(2)">+2</button>
+          <button type="button" class="btn-red bulk-quick" onclick="bulkCandle(-6)">-6</button>
+          <input type="number" id="bulk-candle-value" placeholder="例: 10, -5" aria-label="選択したアカウントに足す数">
+          <button type="button" class="bulk-apply" onclick="bulkCandleCustom()">適用</button>
+        </div>
+        <div class="bulk-row">
+          <span class="bulk-label">グループ</span>
+          <input type="text" id="bulk-group" list="group-list" placeholder="移動先のグループ名" autocomplete="off" aria-label="移動先のグループ名">
+          <button type="button" class="bulk-apply" onclick="bulkMoveGroup()">変更</button>
+        </div>
+        <div class="bulk-foot">
+          <button type="button" class="btn-text danger" onclick="bulkDelete()">選択したアカウントを削除</button>
+        </div>
+      </div>
+    </div>
 
     <h2>データのバックアップ</h2>
     <div class="card">
@@ -453,8 +533,8 @@
     /* ============================================================
        データ保存について（互換性の約束）
        - 保存キーとJSONの形は旧バージョンと完全に同一：
-         localStorage['ios_account_manager_data_v3'] = { accounts: [{id, name, device, group, candles, email?, memo?}], nextId }
-         （email・memo は入力があるときだけ持つ。旧データと旧バージョンはそのまま読める）
+         localStorage['ios_account_manager_data_v3'] = { accounts: [{id, name, device, group, candles, email?, memo?}], nextId, groupOrder? }
+         （email・memo は入力があるとき、groupOrder はグループを並び替えたときだけ持つ。旧データと旧バージョンはそのまま読める）
        - 旧バージョンで保存したデータはそのまま読み込め、書き出した
          バックアップファイルも相互に互換。
        - 画面の好み（テーマ・並び順・フィルター）は別のキー
@@ -465,12 +545,17 @@
 
     let accounts = [];
     let nextId = 1;
+    // グループの表示順（ユーザーが並び替えたときだけ持つ。未登録のグループは登録順で後ろに並ぶ）
+    let groupOrder = [];
     let editingId = null; // 現在編集中のアカウントID（nullなら新規登録モード）
 
     // 画面状態（本体データとは別キーに保存）
     let ui = { theme: null, sort: 'manual', groupFilter: 'ALL', lastExport: null };
     let searchQuery = ''; // 検索語は開き直したときに残らないよう保存しない
     let undoSnapshot = null; // 一括変更・削除の直前スナップショット（1回分）
+    let selectMode = false;        // 一覧で複数選択して一括操作するモード
+    const selectedIds = new Set(); // 選択中のアカウントID（保存しない）
+    let groupPanelOpen = false;    // グループの並び替え・名前変更パネル
 
     // グループごとの色リスト（旧版と同一パレット。行全体ではなく
     // 左端のバー・ドット・グループ名チップにだけ使って安っぽさを抑える）
@@ -492,14 +577,23 @@
           const parsed = JSON.parse(savedData);
           accounts = Array.isArray(parsed.accounts) ? parsed.accounts : [];
           nextId = parsed.nextId || 1;
+          groupOrder = cleanGroupOrder(parsed.groupOrder);
         } catch (e) {
           console.error("データの読み込みに失敗しました。", e);
         }
       }
     }
     function saveData() {
-      const dataToSave = { accounts: accounts, nextId: nextId };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataPayload()));
+    }
+    // 保存・書き出しの形。groupOrder は並び替えたときだけ付ける（旧バージョンは無視して読める）
+    function dataPayload() {
+      const d = { accounts: accounts, nextId: nextId };
+      if (groupOrder.length) d.groupOrder = groupOrder;
+      return d;
+    }
+    function cleanGroupOrder(v) {
+      return Array.isArray(v) ? Array.from(new Set(v.filter(g => typeof g === 'string' && g))) : [];
     }
 
     /* ── 保存・読み込み（画面の好み：別キー） ── */
@@ -510,7 +604,7 @@
           const p = JSON.parse(raw);
           if (p && typeof p === 'object') {
             if (p.theme === 'dark' || p.theme === 'light') ui.theme = p.theme;
-            if (['manual', 'candles-desc', 'candles-asc', 'name'].includes(p.sort)) ui.sort = p.sort;
+            if (['manual', 'group', 'candles-desc', 'candles-asc', 'name'].includes(p.sort)) ui.sort = p.sort;
             if (typeof p.groupFilter === 'string') ui.groupFilter = p.groupFilter;
             if (typeof p.lastExport === 'string') ui.lastExport = p.lastExport;
           }
@@ -586,7 +680,12 @@
       });
       return map;
     }
-    function groupNames() { return Array.from(groupColorMap().keys()); }
+    // 色は登録順で固定し、表示順（groupOrder）を変えても色が入れ替わらないようにする
+    function groupNames() {
+      const existing = Array.from(groupColorMap().keys());
+      const ordered = groupOrder.filter(g => existing.includes(g));
+      return ordered.concat(existing.filter(g => !ordered.includes(g)));
+    }
     // ハート1個 = キャンドル3本。アカウントごとに端数を切り捨てる
     function heartsFor(candles) { return Math.floor((candles || 0) / 3); }
     function totals() {
@@ -599,10 +698,12 @@
         g.count++; g.total += acc.candles || 0;
         perGroup.set(acc.group, g);
       });
-      return { total, hearts, perGroup };
+      const sorted = new Map();
+      groupNames().forEach(name => { if (perGroup.has(name)) sorted.set(name, perGroup.get(name)); });
+      return { total, hearts, perGroup: sorted };
     }
     function takeUndoSnapshot() {
-      undoSnapshot = JSON.stringify({ accounts: accounts, nextId: nextId });
+      undoSnapshot = JSON.stringify(dataPayload());
     }
     function undoLast() {
       if (!undoSnapshot) return;
@@ -610,6 +711,7 @@
         const p = JSON.parse(undoSnapshot);
         accounts = p.accounts || [];
         nextId = p.nextId || 1;
+        groupOrder = cleanGroupOrder(p.groupOrder);
         saveData();
       } catch (e) { /* 復元できなければ何もしない */ }
       undoSnapshot = null;
@@ -817,7 +919,10 @@
       renderBatchNote();
     }
     function applyBatchChange(amount) {
-      const targets = batchTargets();
+      applyCandleDelta(batchTargets(), amount);
+    }
+    // 指定したアカウントのキャンドル数をまとめて増減する（0未満にはしない）
+    function applyCandleDelta(targets, amount) {
       if (!targets.length) { showToast('対象のアカウントがありません'); return; }
       takeUndoSnapshot();
       let clamped = 0;
@@ -844,7 +949,7 @@
 
     /* ── バックアップ（書き出し / 読み込み） ── */
     function exportData() {
-      const payload = JSON.stringify({ accounts: accounts, nextId: nextId }, null, 2);
+      const payload = JSON.stringify(dataPayload(), null, 2);
       const blob = new Blob([payload], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const now = new Date();
@@ -881,6 +986,7 @@
         takeUndoSnapshot();
         accounts = clean.accounts;
         nextId = clean.nextId;
+        groupOrder = clean.groupOrder;
         if (editingId !== null) cancelEdit();
         saveData();
         render();
@@ -913,7 +1019,7 @@
         if (id > maxId) maxId = id;
       }
       const nid = parseInt(parsed.nextId);
-      return { accounts: out, nextId: Math.max(isFinite(nid) ? nid : 1, maxId + 1) };
+      return { accounts: out, nextId: Math.max(isFinite(nid) ? nid : 1, maxId + 1), groupOrder: cleanGroupOrder(parsed.groupOrder) };
     }
 
     /* ── 検索・並び替え・フィルター ── */
@@ -955,19 +1061,165 @@
           (acc.email || '').toLowerCase().includes(searchQuery) ||
           (acc.memo || '').toLowerCase().includes(searchQuery));
       }
-      if (ui.sort === 'candles-desc') list.sort((a, b) => (b.candles || 0) - (a.candles || 0));
+      if (ui.sort === 'group') {
+        const order = groupNames();
+        const pos = new Map(accounts.map((a, i) => [a.id, i]));
+        list.sort((a, b) => (order.indexOf(a.group) - order.indexOf(b.group)) || (pos.get(a.id) - pos.get(b.id)));
+      } else if (ui.sort === 'candles-desc') list.sort((a, b) => (b.candles || 0) - (a.candles || 0));
       else if (ui.sort === 'candles-asc') list.sort((a, b) => (a.candles || 0) - (b.candles || 0));
       else if (ui.sort === 'name') list.sort((a, b) => String(a.name).localeCompare(String(b.name), 'ja'));
       return list;
     }
 
+    /* ── グループの並び替え・名前変更 ── */
+    function toggleGroupPanel() {
+      groupPanelOpen = !groupPanelOpen;
+      renderGroupPanel();
+    }
+    function moveGroup(name, direction) {
+      const order = groupNames();
+      const i = order.indexOf(name);
+      const j = direction === 'up' ? i - 1 : i + 1;
+      if (i === -1 || j < 0 || j >= order.length) return;
+      order[i] = order[j]; order[j] = name;
+      groupOrder = order;
+      saveData();
+      render();
+    }
+    // グループ名を変えると、そのグループの全アカウントがまとめて新しい名前に移る
+    function renameGroup(oldName) {
+      const input = prompt('「' + oldName + '」の新しいグループ名を入力してください。\n既にあるグループ名にすると、そのグループにまとめられます。', oldName);
+      if (input === null) return;
+      const newName = input.trim();
+      if (!newName || newName === oldName) return;
+      const exists = groupNames().includes(newName);
+      takeUndoSnapshot();
+      accounts.forEach(acc => { if (acc.group === oldName) acc.group = newName; });
+      groupOrder = exists ? groupOrder.filter(g => g !== oldName) : groupOrder.map(g => g === oldName ? newName : g);
+      if (ui.groupFilter === oldName) { ui.groupFilter = newName; saveUi(); }
+      saveData();
+      render();
+      showToast(exists ? '「' + newName + '」にまとめました' : 'グループ名を「' + newName + '」に変更しました', true);
+    }
+    function renderGroupPanel() {
+      const panel = document.getElementById('group-panel');
+      const btn = document.getElementById('btn-group-panel');
+      btn.setAttribute('aria-expanded', String(groupPanelOpen));
+      panel.hidden = !groupPanelOpen;
+      if (!groupPanelOpen) return;
+      const t = totals();
+      const colors = groupColorMap();
+      const names = Array.from(t.perGroup.keys());
+      if (!names.length) {
+        panel.innerHTML = '<p class="group-panel-note">グループはまだありません。</p>';
+        return;
+      }
+      let html = '<p class="group-panel-note">▲▼で上のグループ選択や「グループ順」の並びを変えられます。名前変更はそのグループの全アカウントに反映されます。</p>';
+      names.forEach((name, i) => {
+        const g = t.perGroup.get(name);
+        html += '<div class="gp-row">' +
+          '<span class="gp-name"><span class="gdot" style="background:' + colors.get(name).text + '"></span><span class="gp-label">' + esc(name) + '</span></span>' +
+          '<span class="gp-count">' + g.count + '件</span>' +
+          '<span class="gp-btns">' +
+            '<button type="button" class="btn-sort" data-act="up" data-group="' + esc(name) + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="' + esc(name) + 'を上へ">▲</button>' +
+            '<button type="button" class="btn-sort" data-act="down" data-group="' + esc(name) + '"' + (i === names.length - 1 ? ' disabled' : '') + ' aria-label="' + esc(name) + 'を下へ">▼</button>' +
+            '<button type="button" class="btn-text" data-act="rename" data-group="' + esc(name) + '">名前変更</button>' +
+          '</span></div>';
+      });
+      panel.innerHTML = html;
+      panel.querySelectorAll('[data-act]').forEach(b => {
+        const name = b.getAttribute('data-group');
+        const act = b.getAttribute('data-act');
+        b.addEventListener('click', () => act === 'rename' ? renameGroup(name) : moveGroup(name, act));
+      });
+    }
+
+    /* ── 複数選択して一括操作 ── */
+    function toggleSelectMode() {
+      selectMode = !selectMode;
+      if (!selectMode) selectedIds.clear();
+      renderList();
+      renderBulkBar();
+    }
+    function toggleSelect(id, checked) {
+      if (checked) selectedIds.add(id); else selectedIds.delete(id);
+      const row = document.querySelector('.account-item[data-id="' + id + '"]');
+      if (row) row.classList.toggle('selected', checked);
+      renderBulkBar();
+    }
+    function selectAllVisible() {
+      visibleAccounts().forEach(acc => selectedIds.add(acc.id));
+      renderList();
+      renderBulkBar();
+    }
+    function clearSelection() {
+      selectedIds.clear();
+      renderList();
+      renderBulkBar();
+    }
+    function selectedAccounts() { return accounts.filter(acc => selectedIds.has(acc.id)); }
+    function bulkCandle(amount) {
+      if (!selectedIds.size) { showToast('アカウントを選択してください'); return; }
+      applyCandleDelta(selectedAccounts(), amount);
+    }
+    function bulkCandleCustom() {
+      const input = document.getElementById('bulk-candle-value');
+      const v = parseInt(input.value);
+      if (isNaN(v) || v === 0) { showToast('0以外の数値を入力してください'); input.focus(); return; }
+      if (!selectedIds.size) { showToast('アカウントを選択してください'); return; }
+      applyCandleDelta(selectedAccounts(), v);
+      input.value = '';
+    }
+    function bulkMoveGroup() {
+      const input = document.getElementById('bulk-group');
+      const name = input.value.trim();
+      if (!selectedIds.size) { showToast('アカウントを選択してください'); return; }
+      if (!name) { showToast('移動先のグループ名を入力してください'); input.focus(); return; }
+      const targets = selectedAccounts();
+      takeUndoSnapshot();
+      targets.forEach(acc => { acc.group = name; });
+      saveData();
+      render();
+      input.value = '';
+      showToast(targets.length + '件を「' + name + '」に移しました', true);
+    }
+    function bulkDelete() {
+      const targets = selectedAccounts();
+      if (!targets.length) { showToast('アカウントを選択してください'); return; }
+      if (!confirm('選択した ' + targets.length + '件のアカウントを削除してもよろしいですか？')) return;
+      takeUndoSnapshot();
+      if (editingId !== null && selectedIds.has(editingId)) cancelEdit();
+      accounts = accounts.filter(acc => !selectedIds.has(acc.id));
+      selectedIds.clear();
+      saveData();
+      render();
+      showToast(targets.length + '件を削除しました', true);
+    }
+    function renderBulkBar() {
+      const bar = document.getElementById('bulk-bar');
+      const btn = document.getElementById('btn-select-mode');
+      btn.setAttribute('aria-pressed', String(selectMode));
+      btn.textContent = selectMode ? '☑ 選択モードを終了' : '☑ 選択して一括操作';
+      bar.hidden = !selectMode;
+      document.body.classList.toggle('selecting', selectMode);
+      if (!selectMode) return;
+      document.getElementById('bulk-count').textContent = selectedIds.size;
+      bar.querySelectorAll('.bulk-row button, .bulk-foot button').forEach(b => { b.disabled = !selectedIds.size; });
+      document.body.style.setProperty('--bulk-h', bar.offsetHeight + 'px');
+    }
+
     /* ── 描画 ── */
     function render() {
+      // 削除などで消えたアカウントは選択からも外す
+      const ids = new Set(accounts.map(a => a.id));
+      selectedIds.forEach(id => { if (!ids.has(id)) selectedIds.delete(id); });
       renderSummaryAndChips();
       renderList();
       renderBatchTargets();
       renderDatalists();
       renderBackupNote();
+      renderGroupPanel();
+      renderBulkBar();
     }
     function renderSummaryAndChips() {
       const t = totals();
@@ -1050,7 +1302,7 @@
       }
 
       const colors = groupColorMap();
-      const manualOrder = ui.sort === 'manual' && !filtering; // 手動の上下ボタンは「素の並び」が見えている時だけ
+      const manualOrder = ui.sort === 'manual' && !filtering && !selectMode; // 手動の上下ボタンは「素の並び」が見えている時だけ
       listContainer.innerHTML = '';
       list.forEach(acc => {
         const c = colors.get(acc.group) || groupColors[0];
@@ -1058,9 +1310,15 @@
         const isFirst = index === 0;
         const isLast = index === accounts.length - 1;
         const item = document.createElement('div');
-        item.className = 'account-item';
+        const checked = selectMode && selectedIds.has(acc.id);
+        item.className = 'account-item' + (checked ? ' selected' : '');
+        item.setAttribute('data-id', acc.id);
         item.style.borderLeftColor = c.text;
         item.innerHTML =
+          (selectMode
+            ? '<label class="row-check"><input type="checkbox"' + (checked ? ' checked' : '') +
+                ' onchange="toggleSelect(' + acc.id + ', this.checked)" aria-label="' + esc(acc.name) + 'を選択"></label>'
+            : '') +
           '<div class="account-info">' +
             '<div class="account-name">' + esc(acc.name) + '</div>' +
             '<div class="account-meta">' +

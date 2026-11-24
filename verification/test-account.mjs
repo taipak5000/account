@@ -145,5 +145,60 @@ window.handleSubmit({ preventDefault() {} });
 saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
 eq(Object.keys(saved.accounts[0]).sort(), ['candles', 'device', 'group', 'id', 'name'], 'clearing extras removes keys');
 
+// 14) グループの並び替え: 表示順だけ変わり、色と保存形式（並び替えるまで）は変わらない
+eq(window.groupNames(), ['メイン', '予備', '未分類'], 'initial group order by appearance');
+const colorBefore = window.groupColorMap().get('予備').text;
+window.moveGroup('予備', 'up');
+eq(window.groupNames(), ['予備', 'メイン', '未分類'], 'moveGroup up');
+eq(Array.from(doc.querySelectorAll('#group-chips .group-chip')).map(b => b.textContent.split(/\d/)[0]).slice(1, 3), ['予備', 'メイン'], 'chips follow group order');
+eq(doc.getElementById('batch-target').options[1].value, '予備', 'batch select follows group order');
+eq(window.groupColorMap().get('予備').text, colorBefore, 'group color stable after reorder');
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.groupOrder, ['予備', 'メイン', '未分類'], 'groupOrder saved');
+eq(window.validateImport(saved).groupOrder, ['予備', 'メイン', '未分類'], 'import keeps groupOrder');
+window.onSortChange('group');
+eq(Array.from(doc.querySelectorAll('.account-name')).map(e => e.textContent)[0], 'サブ3号機', 'group sort follows group order');
+window.onSortChange('manual');
+
+// 15) グループ名の変更（全アカウントに反映・取り消し可）
+window.prompt = () => 'サブ';
+window.renameGroup('メイン');
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.accounts.filter(a => a.group === 'サブ').length, 2, 'rename moves all accounts');
+eq(saved.groupOrder, ['予備', 'サブ', '未分類'], 'rename keeps position');
+window.undoLast();
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.accounts.filter(a => a.group === 'メイン').length, 2, 'rename undo');
+
+// 16) 複数選択の一括操作
+window.toggleSelectMode();
+eq(doc.querySelectorAll('.row-check input').length, 4, 'checkboxes shown in select mode');
+ok(!doc.getElementById('bulk-bar').hidden, 'bulk bar shown');
+window.toggleSelect(1, true); window.toggleSelect(3, true);
+eq(doc.getElementById('bulk-count').textContent, '2', 'selected count');
+window.bulkCandle(2);
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.accounts.map(a => a.candles), [122, 45, 2, 7], 'bulk candle only selected');
+doc.getElementById('bulk-candle-value').value = '-10';
+window.bulkCandleCustom();
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.accounts.map(a => a.candles), [112, 45, 0, 7], 'bulk custom clamps');
+doc.getElementById('bulk-group').value = '移動先';
+window.bulkMoveGroup();
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.accounts.map(a => a.group), ['移動先', 'メイン', '移動先', '未分類'], 'bulk move group');
+window.undoLast();
+window.selectAllVisible();
+eq(doc.getElementById('bulk-count').textContent, '4', 'select all visible');
+window.confirm = () => true;
+window.bulkDelete();
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.accounts.length, 0, 'bulk delete');
+window.undoLast();
+saved = JSON.parse(window.localStorage.getItem('ios_account_manager_data_v3'));
+eq(saved.accounts.length, 4, 'bulk delete undo');
+window.toggleSelectMode();
+ok(doc.getElementById('bulk-bar').hidden, 'bulk bar hidden after exit');
+
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASS');
 process.exit(failures ? 1 : 0);
